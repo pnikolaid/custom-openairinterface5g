@@ -39,6 +39,8 @@
 #include "LAYER2/RLC/rlc.h"
 
 //#define SRS_IND_DEBUG
+extern int bws_ul[99]; // code modified
+extern int UEs_per_slice[99]; // code modified
 
 static rnti_t lcid_crnti_lookahead(uint8_t *pdu, int pdu_len)
 {
@@ -1884,26 +1886,51 @@ static void pf_ul(module_id_t module_id,
 
     int rbStart = 0;
     const uint16_t slbitmap = SL_to_bitmap(sched_pusch->tda_info.startSymbolIndex, sched_pusch->tda_info.nrOfSymbols);
-    const uint16_t bwpSize = current_BWP->BWPSize;
-    while (rbStart < bwpSize && (rballoc_mask[rbStart] & slbitmap) != slbitmap)
+    uint16_t bwpSize = current_BWP->BWPSize; //  code modified: removed "const" in front of "uint16_t bwpSize")
+
+    // code modified
+    int UE_uid = iterator->UE->uid;
+    // find the slice id of the UE (assumes that we first start all UEs of slice 1, then all UEs of slice 2 and so on...)
+    int slice_id = -1; // slice ids start from 0, it will increase at least by 1 later on
+    int UE_counter = 0;
+    int k = 0;
+    do{
+      UE_counter += UEs_per_slice[k];
+      k++;
+      slice_id += 1;      
+    } while (UE_uid > UE_counter - 1);
+
+    // find slice UL bandwidth and its starting point
+    int slice_bw;
+    for (int i = 0; i < slice_id + 1; i++){
+      slice_bw = bws_ul[i];
+      rbStart = rbStart + slice_bw;
+    }
+    
+    rbStart = rbStart - slice_bw; // overshot rbStart by temp_bw
+    int rbStop = rbStart + slice_bw -1;
+    rbStop = rbStop <= bwpSize -1 ? rbStop : bwpSize -1;
+    // code modified END
+
+    while (rbStart < rbStop && (rballoc_mask[rbStart] & slbitmap) != slbitmap) // code modified: replaced "bwpSize" with "rbStop" (now its inline with gNB_scheduler_dlsch.c)
       rbStart++;
     sched_pusch->rbStart = rbStart;
     uint16_t max_rbSize = 1;
-    while (rbStart + max_rbSize < bwpSize && (rballoc_mask[rbStart + max_rbSize] & slbitmap) == slbitmap)
+    while (rbStart + max_rbSize <= rbStop && (rballoc_mask[rbStart + max_rbSize] & slbitmap) == slbitmap) // code modified: replaced "< bwpSize" with "<= rbStop" (now its inline with gNB_scheduler_dlsch.c)
       max_rbSize++;
 
-    if (rbStart + min_rb >= bwpSize || max_rbSize < min_rb) {
-      LOG_D(NR_MAC, "[UE %04x][%4d.%2d] could not allocate UL data: no resources (rbStart %d, min_rb %d, bwpSize %d)\n",
+    if (rbStart + min_rb -1 > rbStop || max_rbSize < min_rb) { // code modified: at worst case scenario last_allocated_prb = rbstart + min_rb -1 so if last_allocated_prb > rbStop then something is wrong
+      LOG_D(NR_MAC, "[UE %04x][%4d.%2d] could not allocate UL data: no resources (rbStart %d, min_rb %d, rbStop %d)\n", // code modified: fix print
             iterator->UE->rnti,
             frame,
             slot,
             rbStart,
             min_rb,
-            bwpSize);
+            rbStop); // fix print
       iterator++;
       continue;
     } else
-      LOG_D(NR_MAC, "allocating UL data for RNTI %04x (rbStart %d, min_rb %d, max_rbSize %d, bwpSize %d)\n", iterator->UE->rnti, rbStart, min_rb, max_rbSize, bwpSize);
+      LOG_D(NR_MAC, "allocating UL data for RNTI %04x (rbStart %d, min_rb %d, max_rbSize %d, rbStop %d)\n", iterator->UE->rnti, rbStart, min_rb, max_rbSize, rbStop); // code modified
 
     /* Calculate the current scheduling bytes */
     const int B = cmax(sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes, 0);

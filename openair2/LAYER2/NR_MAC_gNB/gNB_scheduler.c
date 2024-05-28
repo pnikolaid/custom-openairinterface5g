@@ -52,8 +52,13 @@
 
 #include <errno.h>
 #include <string.h>
+#include "openair2/RRC/NR/rrc_gNB_UE_context.h" // code modified
 
 const uint8_t nr_rv_round_map[4] = {0, 2, 3, 1};
+bool first_time = true; // code modified
+int bws_dl[99]; // code modified
+int bws_ul[99]; // code modified
+int UEs_per_slice[99]; // code modified
 
 void clear_nr_nfapi_information(gNB_MAC_INST *gNB,
                                 int CC_idP,
@@ -237,6 +242,93 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     clear_nr_nfapi_information(gNB, CC_id, frame, slot, &sched_info->DL_req, &sched_info->TX_req, &sched_info->UL_dci_req);
   }
+
+  // code modified
+  int Tu = 20; // update period in frames (frame duration = 10 ms)
+  int window = 30000; // log window (reset log file every W entries, i.e., every 10WTu ms
+  int entry = 0;
+  if ((slot == 0) && (frame % Tu) == 0) { // updates every Tu frames at slot 0, frame duration = 10 ms => update period = 10Tu ms
+
+    // read current DL slice bws
+    FILE *bwFile;
+    bwFile = fopen("../../../../algo/slice_bws_dl.txt", "r");
+    int k = 0;
+    while (fscanf(bwFile, "%d", &bws_dl[k] ) > 0) {
+      k++;
+    }
+    fclose(bwFile);
+
+    // read current UL slice bws
+    FILE *ul_bwFile;
+    ul_bwFile = fopen("../../../../algo/slice_bws_ul.txt", "r");   // Read current slice bandwidth
+    k = 0;
+    while (fscanf(ul_bwFile, "%d", &bws_ul[k] ) > 0) {
+      k++;
+    }
+    fclose(ul_bwFile);
+
+    // read current UEs per slice (should remain static for each experiment)
+    FILE *ueFILE;
+    ueFILE = fopen("../../../../algo/UEs_per_slice.txt", "r");   // Read current slice UEs
+    k = 0;
+    while (fscanf(ueFILE, "%d", &UEs_per_slice[k] ) > 0) {
+      k++;
+    }
+    fclose(ueFILE);
+
+    entry++;
+    if (first_time){
+      remove("../../../../algo/state_dl.txt");
+      remove("../../../../algo/state_ul.txt");
+      first_time = false;
+    }
+
+    FILE *dlState;
+    FILE *ulState;
+
+    if (entry <= window){
+      dlState = fopen("../../../../algo/state_dl.txt", "a");
+      ulState = fopen("../../../../algo/state_ul.txt", "a");
+
+    }
+    else { // maximum entries stored, reset file
+      dlState = fopen("../../../../algo/state_dl.txt", "w");
+      ulState = fopen("../../../../algo/state_ul.txt", "w");
+      entry = 0;
+
+    }
+    fprintf(dlState, "Frame %d\n", frame);
+    fprintf(ulState, "Frame %d\n", frame);
+
+    UE_iterator(gNB->UE_info.list, UE) {
+      NR_UE_sched_ctrl_t *sched_ctrl = &UE->UE_sched_ctrl;
+
+    
+      int dtx = UE->mac_stats.dl.rounds[0] - sched_ctrl->dl_bler_stats.rounds[0];
+      // write the DL state of the UE
+      fprintf(dlState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
+      fprintf(dlState, "%d\t\t\t", UE->uid);
+      fprintf(dlState, "%d\t\t\t", dtx); // dtx > 3 means transmitting data according to get_mcs_from_bler function but it seems that dtx=3 still implies data transmission
+      fprintf(dlState, "%u\t\t\t", sched_ctrl->dl_bler_stats.mcs);
+      fprintf(dlState, "%u\t\t\t", sched_ctrl->num_total_bytes);
+      fprintf(dlState, "%lu\t\t\t", UE->mac_stats.dl.lc_bytes[4]);
+
+
+      // write the UL state of the UE
+      fprintf(ulState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
+      fprintf(ulState, "%d\t\t\t", UE->uid);
+      fprintf(ulState, "%d\t\t\t", dtx); //  dtx > 3 means transmitting data according to get_mcs_from_bler function but it seems that dtx=3 still implies data transmission
+      fprintf(ulState, "%u\t\t\t", sched_ctrl->ul_bler_stats.mcs);
+      fprintf(ulState, "%u\t\t\t", sched_ctrl->estimated_ul_buffer);
+      fprintf(ulState, "%lu\t\t\t", UE->mac_stats.ul.lc_bytes[4]);
+
+    }
+    fprintf(dlState, "\n\n");
+    fclose(dlState);
+    fprintf(ulState, "\n\n");
+    fclose(ulState);
+  }
+  // code modified END
 
   if ((slot == 0) && (frame & 127) == 0) {
     char stats_output[32656] = {0};
