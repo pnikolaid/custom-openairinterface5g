@@ -251,7 +251,7 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     // read current DL slice bws
     FILE *bwFile;
-    bwFile = fopen("../../../../algo/slice_bws_dl.txt", "r");
+    bwFile = fopen("../../../../5G-configs-logs/slice_bws_dl.txt", "r");
     int k = 0;
     while (fscanf(bwFile, "%d", &bws_dl[k] ) > 0) {
       k++;
@@ -260,7 +260,7 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     // read current UL slice bws
     FILE *ul_bwFile;
-    ul_bwFile = fopen("../../../../algo/slice_bws_ul.txt", "r");   // Read current slice bandwidth
+    ul_bwFile = fopen("../../../../5G-configs-logs/slice_bws_ul.txt", "r");   // Read current slice bandwidth
     k = 0;
     while (fscanf(ul_bwFile, "%d", &bws_ul[k] ) > 0) {
       k++;
@@ -269,7 +269,7 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     // read current UEs per slice (should remain static for each experiment)
     FILE *ueFILE;
-    ueFILE = fopen("../../../../algo/UEs_per_slice.txt", "r");   // Read current slice UEs
+    ueFILE = fopen("../../../../5G-configs-logs/UEs_per_slice.txt", "r");   // Read current slice UEs
     k = 0;
     while (fscanf(ueFILE, "%d", &UEs_per_slice[k] ) > 0) {
       k++;
@@ -278,8 +278,8 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     entry++;
     if (first_time){
-      remove("../../../../algo/state_dl.txt");
-      remove("../../../../algo/state_ul.txt");
+      remove("../../../../5G-configs-logs/state_dl.txt");
+      remove("../../../../5G-configs-logs/state_ul.txt");
       first_time = false;
     }
 
@@ -287,13 +287,13 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
     FILE *ulState;
 
     if (entry <= window){
-      dlState = fopen("../../../../algo/state_dl.txt", "a");
-      ulState = fopen("../../../../algo/state_ul.txt", "a");
+      dlState = fopen("../../../../5G-configs-logs/state_dl.txt", "a");
+      ulState = fopen("../../../../5G-configs-logs/state_ul.txt", "a");
 
     }
     else { // maximum entries stored, reset file
-      dlState = fopen("../../../../algo/state_dl.txt", "w");
-      ulState = fopen("../../../../algo/state_ul.txt", "w");
+      dlState = fopen("../../../../5G-configs-logs/state_dl.txt", "w");
+      ulState = fopen("../../../../5G-configs-logs/state_ul.txt", "w");
       entry = 0;
 
     }
