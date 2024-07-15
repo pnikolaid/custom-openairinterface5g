@@ -1910,6 +1910,7 @@ static void pf_ul(module_id_t module_id,
     rbStart = rbStart - slice_bw; // overshot rbStart by temp_bw
     int rbStop = rbStart + slice_bw -1;
     rbStop = rbStop <= bwpSize -1 ? rbStop : bwpSize -1;
+    // printf("uid: %d, slice id: %d, slice_ul_bw %d, rbStart: %d, rbStop: %d\n", UE_uid, slice_id, slice_bw, rbStart, rbStop);
     // code modified END
 
     while (rbStart < rbStop && (rballoc_mask[rbStart] & slbitmap) != slbitmap) // code modified: replaced "bwpSize" with "rbStop" (now its inline with gNB_scheduler_dlsch.c)

@@ -52,7 +52,8 @@
 #define WORD 32
 //#define SIZE_OF_POINTER sizeof (void *)
 extern int bws_dl[99]; // code modified
-extern int UEs_per_slice[99]; // code modified 
+extern int UEs_per_slice[99]; // code modified
+int max_allowed_uid = 0; // code modified, every UE for some reason connects once and then reconnects, so same uid must be used twice
 
 int get_dl_tda(const gNB_MAC_INST *nrmac, const NR_ServingCellConfigCommon_t *scc, int slot) {
 
@@ -787,6 +788,14 @@ static void pf_dl(module_id_t module_id,
 
     // code modified  (update rbStart and rbStop)
     int UE_uid = iterator->UE->uid;
+
+    // each UE connects twice, so we need to fix the uid
+    if (UE_uid > max_allowed_uid)
+      {
+        UE_uid = max_allowed_uid;
+        iterator->UE->uid = UE_uid;
+        max_allowed_uid++;
+      }
     
     // find the slice id of the UE (assumes that we first start all UEs of slice 1, then all UEs of slice 2 and so on...)
     int slice_id = -1; // slice ids start from 0, it will increase at least by 1 later on
@@ -808,6 +817,7 @@ static void pf_dl(module_id_t module_id,
     rbStart = rbStart - slice_bw; // overshot rbStart by temp_bw
     int last_rb = rbStart + slice_bw -1;
     rbStop = last_rb <= rbStop? last_rb : rbStop;
+    // printf("uid: %d, slice id: %d, slice_dl_bw %d, rbStart: %d, rbStop: %d\n", UE_uid, slice_id, slice_bw, rbStart, rbStop);
     // code modified END
       
     // Freq-demain allocation

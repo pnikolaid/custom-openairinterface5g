@@ -298,7 +298,10 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
 
     }
     fprintf(dlState, "Frame %d\n", frame);
+    fprintf(dlState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
+
     fprintf(ulState, "Frame %d\n", frame);
+    fprintf(ulState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
 
     UE_iterator(gNB->UE_info.list, UE) {
       NR_UE_sched_ctrl_t *sched_ctrl = &UE->UE_sched_ctrl;
@@ -306,21 +309,18 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
     
       int dtx = UE->mac_stats.dl.rounds[0] - sched_ctrl->dl_bler_stats.rounds[0];
       // write the DL state of the UE
-      fprintf(dlState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
       fprintf(dlState, "%d\t\t\t", UE->uid);
       fprintf(dlState, "%d\t\t\t", dtx); // dtx > 3 means transmitting data according to get_mcs_from_bler function but it seems that dtx=3 still implies data transmission
       fprintf(dlState, "%u\t\t\t", sched_ctrl->dl_bler_stats.mcs);
       fprintf(dlState, "%u\t\t\t", sched_ctrl->num_total_bytes);
-      fprintf(dlState, "%lu\t\t\t", UE->mac_stats.dl.lc_bytes[4]);
-
+      fprintf(dlState, "%lu\t\t\t\n", UE->mac_stats.dl.lc_bytes[4]);
 
       // write the UL state of the UE
-      fprintf(ulState, "UID\t\t\tDTX\t\t\tMCS\t\t\tMAC\t\t\tRLC\n");
       fprintf(ulState, "%d\t\t\t", UE->uid);
       fprintf(ulState, "%d\t\t\t", dtx); //  dtx > 3 means transmitting data according to get_mcs_from_bler function but it seems that dtx=3 still implies data transmission
       fprintf(ulState, "%u\t\t\t", sched_ctrl->ul_bler_stats.mcs);
       fprintf(ulState, "%u\t\t\t", sched_ctrl->estimated_ul_buffer);
-      fprintf(ulState, "%lu\t\t\t", UE->mac_stats.ul.lc_bytes[4]);
+      fprintf(ulState, "%lu\t\t\t\n", UE->mac_stats.ul.lc_bytes[4]);
 
     }
     fprintf(dlState, "\n\n");
